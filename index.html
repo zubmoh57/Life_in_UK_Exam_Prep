@@ -270,17 +270,14 @@ const BANK=[[1,"Which of the following is one of the fundamental principles of B
   }
   const title = t => t === "R" ? "Random 24" : (typeof t === "string" && t[0] === "T") ? TLABEL[t.slice(2)] + " · 24" : "Practice Test " + t;
 
-  function pick(i) { S.ans[S.cur] = i; S.confirm = false; render(); }
-  function go(i) { if (i < 0 || i >= S.ids.length) return; S.cur = i; S.confirm = false; render(); }
-  function submit(force) {
-    const missing = S.ans.filter(a => a === null).length;
-    if (missing && !force) { S.confirm = true; render(); return; }
-    S.ended = Date.now(); S.view = "result"; clearInterval(tick);
-    const score = S.ids.reduce((n, id, k) => n + (S.ans[k] === BANK[id][3]), 0);
-    S.score = score;
-    const hist = store.get("liuk-last", {}); hist[S.test] = score; store.set("liuk-last", hist);
-    render(); window.scrollTo(0, 0);
+  
+  function pick(i) {
+    if (S.ans[S.cur] !== null) return;
+    S.ans[S.cur] = i;
+    S.confirm = false;
+    render();
   }
+
 
   function viewStart() {
     const hist = store.get("liuk-last", {});
@@ -316,7 +313,35 @@ const BANK=[[1,"Which of the following is one of the fundamental principles of B
     const id = S.ids[S.cur], r = BANK[id], a = S.ans[S.cur];
     const done = S.ans.filter(x => x !== null).length;
     const dots = S.ids.map((_, k) => `<button class="dot${S.ans[k] !== null ? " done" : ""}${k === S.cur ? " here" : ""}" data-go="${k}" aria-label="Question ${k + 1}${S.ans[k] !== null ? ", answered" : ""}">${k + 1}</button>`).join("");
-    const choices = r[2].map((o, i) => `<button class="choice" role="radio" aria-checked="${a === i}" data-pick="${i}"><span class="key">${L[i]}</span><span>${esc(o)}</span></button>`).join("");
+    
+    const choices = r[2].map((o, i) => {
+      const answered = a !== null;
+      const correct = i === r[3];
+    
+      const background = answered && correct
+        ? "#dcfce7"
+        : answered && i === a
+          ? "#fee2e2"
+          : "";
+    
+      return `<button class="choice"
+        role="radio"
+        aria-checked="${a === i}"
+        data-pick="${i}"
+        ${answered ? "disabled" : ""}
+        style="${background ? `background:${background};color:#111827;opacity:1;` : ""}">
+        <span class="key">${L[i]}</span>
+        <span>${esc(o)}</span>
+      </button>`;
+    }).join("");
+    
+    const feedback = a === null ? "" : `
+      <div class="notice" role="status">
+        <strong>${a === r[3] ? "✓ Correct!" : "✗ Incorrect"}</strong>
+        <p>Correct answer: ${esc(r[2][r[3]])}</p>
+        <p>${esc(r[4])}</p>
+      </div>`;
+
     const missing = n - done;
     const confirm = S.confirm ? `<div class="notice warn" role="alert"><p>You have <b>${missing}</b> unanswered question${missing === 1 ? "" : "s"}. They will be marked wrong.</p><div class="row"><button class="btn" data-act="first-gap">Go to first unanswered</button><button class="btn primary" data-act="force">Submit anyway</button></div></div>` : "";
     return `
@@ -330,6 +355,7 @@ const BANK=[[1,"Which of the following is one of the fundamental principles of B
         <span class="qnum">Question ${S.cur + 1} of ${n}</span>
         <p class="qtext">${esc(r[1])}</p>
         <div class="choices" role="radiogroup" aria-label="Answers">${choices}</div>
+        ${feedback}
       </article>
       ${confirm}
       <div class="nav exam-nav">
