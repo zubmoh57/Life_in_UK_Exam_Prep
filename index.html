@@ -279,6 +279,31 @@ const BANK=[[1,"Which of the following is one of the fundamental principles of B
   }
 
 
+  function go(i) {
+    if (i < 0 || i >= S.ids.length) return;
+    S.cur = i;
+    S.confirm = false;
+    render();
+  }
+
+  function submit(force) {
+    const missing = S.ans.filter(a => a === null).length;
+    if (missing && !force) {
+      S.confirm = true;
+      render();
+      return;
+    }
+    S.ended = Date.now();
+    S.view = "result";
+    clearInterval(tick);
+    S.score = S.ids.reduce((n, id, k) => n + (S.ans[k] === BANK[id][3]), 0);
+    const hist = store.get("liuk-last", {});
+    hist[S.test] = S.score;
+    store.set("liuk-last", hist);
+    render();
+    window.scrollTo(0, 0);
+  }
+
   function viewStart() {
     const hist = store.get("liuk-last", {});
     const last = k => hist[k] == null ? "Not taken yet" : "Last score " + hist[k] + "/24";
@@ -290,7 +315,7 @@ const BANK=[[1,"Which of the following is one of the fundamental principles of B
       <header style="display:grid;gap:12px">
         <span class="eyebrow">Life in the UK · citizenship test practice</span>
         <h1>Mock exam</h1>
-        <p class="lede">Pick a test and answer all 24 questions. Nothing is marked until you submit, and you can change any answer before then. Afterwards you see your score and the correct answers with a short explanation for each.</p>
+        <p class="lede">Pick a test and answer all 24 questions. Choose an answer to see immediately whether it is correct, along with an explanation. Your first answer is locked in, and you can review your score after submitting.</p>
         <div class="facts"><span class="fact"><b>24</b> questions</span><span class="fact"><b>45</b> minutes</span><span class="fact">Pass mark <b>18/24</b> (75%)</span><span class="fact"><b>720</b> questions · <b>30</b> tests</span></div>
       </header>
       <section style="display:grid;gap:14px" aria-label="Choose a test">
